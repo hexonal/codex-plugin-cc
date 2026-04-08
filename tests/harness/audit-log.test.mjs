@@ -8,7 +8,7 @@ import {
   resolveAuditLogFile,
   appendAuditEntry,
   pruneAuditLogs,
-} from "../../plugins/codex/scripts/lib/harness/audit-log.mjs";
+} from "../../plugins/harness-engineering/scripts/lib/harness/audit-log.mjs";
 
 /** Collect temp dirs for cleanup. */
 let tempDirs = [];

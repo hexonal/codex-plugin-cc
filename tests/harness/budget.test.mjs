@@ -9,7 +9,7 @@ import {
   recordToolCall,
   checkPromptBudget,
   getBudgetUsage,
-} from "../../plugins/codex/scripts/lib/harness/budget.mjs";
+} from "../../plugins/harness-engineering/scripts/lib/harness/budget.mjs";
 
 function makeTmpDir() {
   const dir = path.join(os.tmpdir(), "budget-test-" + Date.now());

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { classifyToolRisk } from "../../plugins/codex/scripts/lib/harness/risk-classify.mjs";
+import { classifyToolRisk } from "../../plugins/harness-engineering/scripts/lib/harness/risk-classify.mjs";
 
 const rules = [
   { name: "no-rm-rf", pattern: "rm\\s+-rf?\\s+/", severity: "critical", applies_to: ["Bash"] },

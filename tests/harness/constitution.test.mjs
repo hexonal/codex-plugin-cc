@@ -9,7 +9,7 @@ import {
   getRiskRules,
   getPermissionProfile,
   getBudgetLimits,
-} from "../../plugins/codex/scripts/lib/harness/constitution.mjs";
+} from "../../plugins/harness-engineering/scripts/lib/harness/constitution.mjs";
 
 /**
  * Helper: create a temp directory with .codex-harness/constitution.yaml

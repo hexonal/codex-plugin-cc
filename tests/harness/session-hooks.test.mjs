@@ -9,11 +9,11 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SESSION_START_HOOK = path.resolve(
   __dirname,
-  "../../plugins/codex/scripts/harness-session-start-hook.mjs",
+  "../../plugins/harness-engineering/scripts/harness-session-start-hook.mjs",
 );
 const SESSION_END_HOOK = path.resolve(
   __dirname,
-  "../../plugins/codex/scripts/harness-session-end-hook.mjs",
+  "../../plugins/harness-engineering/scripts/harness-session-end-hook.mjs",
 );
 
 const CONSTITUTION_YAML = `\

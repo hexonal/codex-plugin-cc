@@ -3,51 +3,51 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const HOOKS_JSON_PATH = path.resolve(import.meta.dirname, '../../plugins/codex/hooks/hooks.json');
+const CODEX_HOOKS_PATH = path.resolve(import.meta.dirname, '../../plugins/codex/hooks/hooks.json');
+const HARNESS_HOOKS_PATH = path.resolve(import.meta.dirname, '../../plugins/harness-engineering/hooks/hooks.json');
 
-describe('backward-compat / hooks.json', () => {
-  const hooks = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf8'));
+describe('backward-compat / codex plugin hooks.json (original)', () => {
+  const hooks = JSON.parse(fs.readFileSync(CODEX_HOOKS_PATH, 'utf8'));
 
-  it('still contains original SessionStart lifecycle hook', () => {
+  it('contains only original 3 hook events', () => {
+    const events = Object.keys(hooks.hooks).sort();
+    assert.deepStrictEqual(events, ['SessionEnd', 'SessionStart', 'Stop']);
+  });
+
+  it('contains SessionStart lifecycle hook', () => {
     const cmds = hooks.hooks.SessionStart[0].hooks.map(h => h.command);
     assert.ok(cmds.some(c => c.includes('session-lifecycle-hook.mjs')));
   });
 
-  it('still contains original SessionEnd lifecycle hook', () => {
+  it('contains SessionEnd lifecycle hook', () => {
     const cmds = hooks.hooks.SessionEnd[0].hooks.map(h => h.command);
     assert.ok(cmds.some(c => c.includes('session-lifecycle-hook.mjs')));
   });
 
-  it('still contains original Stop review gate hook', () => {
+  it('contains Stop review gate hook', () => {
     const cmds = hooks.hooks.Stop[0].hooks.map(h => h.command);
     assert.ok(cmds.some(c => c.includes('stop-review-gate-hook.mjs')));
   });
 
-  it('has all 6 hook event types registered', () => {
-    const events = Object.keys(hooks.hooks).sort();
-    assert.deepStrictEqual(events, [
-      'PostToolUse', 'PreToolUse', 'SessionEnd', 'SessionStart', 'Stop', 'UserPromptSubmit'
-    ]);
-  });
-
-  it('SessionStart runs lifecycle hook before harness hook', () => {
-    const cmds = hooks.hooks.SessionStart[0].hooks.map(h => h.command);
-    const lifecycleIdx = cmds.findIndex(c => c.includes('session-lifecycle-hook.mjs'));
-    const harnessIdx = cmds.findIndex(c => c.includes('harness-session-start-hook.mjs'));
-    assert.ok(lifecycleIdx < harnessIdx, 'lifecycle hook should run before harness hook');
-  });
-
-  it('SessionEnd runs harness hook before lifecycle hook', () => {
-    const cmds = hooks.hooks.SessionEnd[0].hooks.map(h => h.command);
-    const harnessIdx = cmds.findIndex(c => c.includes('harness-session-end-hook.mjs'));
-    const lifecycleIdx = cmds.findIndex(c => c.includes('session-lifecycle-hook.mjs'));
-    assert.ok(harnessIdx < lifecycleIdx, 'harness hook should run before lifecycle hook');
+  it('does NOT contain harness hooks (PreToolUse, PostToolUse, UserPromptSubmit)', () => {
+    assert.ok(!hooks.hooks.PreToolUse, 'PreToolUse should not be in codex plugin');
+    assert.ok(!hooks.hooks.PostToolUse, 'PostToolUse should not be in codex plugin');
+    assert.ok(!hooks.hooks.UserPromptSubmit, 'UserPromptSubmit should not be in codex plugin');
   });
 });
 
-describe('backward-compat / harness no-op without constitution', () => {
+describe('backward-compat / harness-engineering plugin', () => {
+  const hooks = JSON.parse(fs.readFileSync(HARNESS_HOOKS_PATH, 'utf8'));
+
+  it('has harness hook events', () => {
+    const events = Object.keys(hooks.hooks).sort();
+    assert.deepStrictEqual(events, [
+      'PostToolUse', 'PreToolUse', 'SessionEnd', 'SessionStart', 'UserPromptSubmit'
+    ]);
+  });
+
   it('all harness hook scripts exist', () => {
-    const scriptsDir = path.resolve(import.meta.dirname, '../../plugins/codex/scripts');
+    const scriptsDir = path.resolve(import.meta.dirname, '../../plugins/harness-engineering/scripts');
     const harnessScripts = [
       'harness-session-start-hook.mjs',
       'harness-session-end-hook.mjs',
@@ -61,7 +61,7 @@ describe('backward-compat / harness no-op without constitution', () => {
   });
 
   it('all harness library modules exist', () => {
-    const libDir = path.resolve(import.meta.dirname, '../../plugins/codex/scripts/lib/harness');
+    const libDir = path.resolve(import.meta.dirname, '../../plugins/harness-engineering/scripts/lib/harness');
     const modules = [
       'trace.mjs', 'constitution.mjs', 'risk-classify.mjs',
       'permission-gate.mjs', 'sanitize.mjs', 'audit-log.mjs', 'budget.mjs',

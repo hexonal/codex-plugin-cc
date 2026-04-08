@@ -8,7 +8,7 @@ import {
   generateTraceId,
   getTraceId,
   propagateTraceId,
-} from "../../plugins/codex/scripts/lib/harness/trace.mjs";
+} from "../../plugins/harness-engineering/scripts/lib/harness/trace.mjs";
 
 test("generateTraceId() returns string matching expected pattern", () => {
   const id = generateTraceId();

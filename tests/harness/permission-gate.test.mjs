@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { checkPermission } from "../../plugins/codex/scripts/lib/harness/permission-gate.mjs";
+import { checkPermission } from "../../plugins/harness-engineering/scripts/lib/harness/permission-gate.mjs";
 
 const profile = {
   blockOn: ["critical"],

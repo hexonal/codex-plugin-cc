@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOOK_SCRIPT = path.resolve(
   __dirname,
-  "../../plugins/codex/scripts/harness-post-tool-hook.mjs",
+  "../../plugins/harness-engineering/scripts/harness-post-tool-hook.mjs",
 );
 
 const CONSTITUTION_YAML = `\

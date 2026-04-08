@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { sanitizeOutput } from "../../plugins/codex/scripts/lib/harness/sanitize.mjs";
+import { sanitizeOutput } from "../../plugins/harness-engineering/scripts/lib/harness/sanitize.mjs";
 
 describe("sanitizeOutput", () => {
   it("redacts AWS access key IDs", () => {
