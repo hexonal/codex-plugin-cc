@@ -477,7 +477,7 @@ async function executeTaskRun(request) {
     auditEvent(harnessStateDir, { type: "budget.blocked", used: budgetCheck.used, limit: budgetCheck.limit });
     throw new Error(`Harness blocked: token budget exhausted (${budgetCheck.used}/${budgetCheck.limit}).`);
   }
-  auditEvent(harnessStateDir, { type: "task.started", prompt: request.prompt?.slice(0, 200) });
+  auditEvent(harnessStateDir, { type: "task.started", promptLength: (request.prompt || "").length });
   // --- end harness pre-flight ---
 
   const taskMetadata = buildTaskRunMetadata({

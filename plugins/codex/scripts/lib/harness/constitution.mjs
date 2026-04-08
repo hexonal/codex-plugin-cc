@@ -109,9 +109,9 @@ export function getBudgetConfig() {
   const c = loadConstitution();
   const b = c?.budget || {};
   return {
-    limitTokens: b.default_limit_tokens || 2000000,
-    warningThreshold: b.warning_threshold || 0.80,
-    charsPerToken: b.chars_per_token_estimate || 4
+    limitTokens: b.default_limit_tokens ?? 2000000,
+    warningThreshold: b.warning_threshold ?? 0.80,
+    charsPerToken: b.chars_per_token_estimate ?? 4
   };
 }
 
