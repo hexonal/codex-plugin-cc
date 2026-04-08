@@ -1,0 +1,40 @@
+version: "1.0"
+scope: codex-plugin-internal
+
+risk:
+  destructive_patterns:
+    - pattern: "rm\\s+-rf"
+      reason: "Recursive force removal"
+    - pattern: "DROP\\s+TABLE|TRUNCATE\\s+TABLE"
+      reason: "Destructive SQL"
+    - pattern: "git\\s+push\\s+--force"
+      reason: "Force push overwrites remote history"
+    - pattern: "format\\s+(disk|drive|partition)"
+      reason: "Disk formatting"
+  elevated_patterns:
+    - pattern: "git\\s+reset\\s+--hard"
+      reason: "Hard reset discards uncommitted work"
+    - pattern: "\\.env|credentials|secret"
+      reason: "Credential-adjacent files"
+
+budget:
+  default_limit_tokens: 2000000
+  warning_threshold: 0.80
+  chars_per_token_estimate: 4
+
+sanitize:
+  patterns:
+    - name: aws_access_key
+      regex: "AKIA[A-Z0-9]{16}"
+    - name: github_pat
+      regex: "ghp_[a-zA-Z0-9]{36}"
+    - name: openai_key
+      regex: "sk-[a-zA-Z0-9]{48}"
+    - name: pem_block
+      regex: "-----BEGIN [A-Z ]+-----[\\s\\S]+?-----END [A-Z ]+-----"
+    - name: generic_password
+      regex: "(?:password|passwd|secret)\\s*[:=]\\s*\\S+"
+
+audit:
+  file: "audit.jsonl"
+  max_size_bytes: 10485760

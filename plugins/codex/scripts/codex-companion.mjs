@@ -28,6 +28,7 @@ import {
   generateJobId,
   getConfig,
   listJobs,
+  resolveStateDir,
   setConfig,
   upsertJob,
   writeJobFile
@@ -61,6 +62,10 @@ import {
   renderStatusReport,
   renderTaskResult
 } from "./lib/render.mjs";
+import { classifyPromptRisk } from "./lib/harness/risk-classify.mjs";
+import { sanitizeOutput } from "./lib/harness/sanitize.mjs";
+import { checkBudget, recordUsage } from "./lib/harness/budget.mjs";
+import { auditEvent } from "./lib/harness/audit-log.mjs";
 
 const ROOT_DIR = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const REVIEW_SCHEMA = path.join(ROOT_DIR, "schemas", "review-output.schema.json");
@@ -328,6 +333,16 @@ async function executeReviewRun(request) {
   ensureCodexReady(request.cwd);
   ensureGitRepository(request.cwd);
 
+  // --- harness: pre-flight ---
+  const harnessStateDir = resolveStateDir(request.cwd);
+  const budgetCheck = checkBudget(harnessStateDir);
+  if (budgetCheck.status === "blocked") {
+    auditEvent(harnessStateDir, { type: "budget.blocked", used: budgetCheck.used, limit: budgetCheck.limit });
+    throw new Error(`Harness blocked: token budget exhausted (${budgetCheck.used}/${budgetCheck.limit}).`);
+  }
+  auditEvent(harnessStateDir, { type: "review.started", reviewName: request.reviewName });
+  // --- end harness pre-flight ---
+
   const target = resolveReviewTarget(request.cwd, {
     base: request.base,
     scope: request.scope
@@ -341,6 +356,14 @@ async function executeReviewRun(request) {
       model: request.model,
       onProgress: request.onProgress
     });
+    // --- harness: post-flight ---
+    const nativeSanitized = sanitizeOutput(result.reviewText || "");
+    if (nativeSanitized.redactions.length > 0) {
+      auditEvent(harnessStateDir, { type: "redaction.applied", redactions: nativeSanitized.redactions });
+    }
+    recordUsage(harnessStateDir, 0, (result.reviewText || "").length);
+    auditEvent(harnessStateDir, { type: "review.completed", threadId: result.threadId });
+    // --- end harness post-flight ---
     const payload = {
       review: reviewName,
       target,
@@ -349,7 +372,7 @@ async function executeReviewRun(request) {
       codex: {
         status: result.status,
         stderr: result.stderr,
-        stdout: result.reviewText,
+        stdout: nativeSanitized.text,
         reasoning: result.reasoningSummary
       }
     };
@@ -388,6 +411,14 @@ async function executeReviewRun(request) {
     status: result.status,
     failureMessage: result.error?.message ?? result.stderr
   });
+  // --- harness: post-flight ---
+  const advSanitized = sanitizeOutput(result.finalMessage || "");
+  if (advSanitized.redactions.length > 0) {
+    auditEvent(harnessStateDir, { type: "redaction.applied", redactions: advSanitized.redactions });
+  }
+  recordUsage(harnessStateDir, prompt.length, (result.finalMessage || "").length);
+  auditEvent(harnessStateDir, { type: "review.completed", threadId: result.threadId });
+  // --- end harness post-flight ---
   const payload = {
     review: reviewName,
     target,
@@ -400,7 +431,7 @@ async function executeReviewRun(request) {
     codex: {
       status: result.status,
       stderr: result.stderr,
-      stdout: result.finalMessage,
+      stdout: advSanitized.text,
       reasoning: result.reasoningSummary
     },
     result: parsed.parsed,
@@ -430,6 +461,24 @@ async function executeReviewRun(request) {
 async function executeTaskRun(request) {
   const workspaceRoot = resolveWorkspaceRoot(request.cwd);
   ensureCodexReady(request.cwd);
+
+  // --- harness: pre-flight checks ---
+  const harnessStateDir = resolveStateDir(request.cwd);
+  if (request.prompt) {
+    const risk = classifyPromptRisk(request.prompt, { write: request.write });
+    auditEvent(harnessStateDir, { type: "task.risk", level: risk.level, reasons: risk.reasons });
+    if (risk.level === "destructive") {
+      auditEvent(harnessStateDir, { type: "task.blocked", reasons: risk.reasons });
+      throw new Error(`Harness blocked: prompt contains destructive patterns — ${risk.reasons.join("; ")}`);
+    }
+  }
+  const budgetCheck = checkBudget(harnessStateDir);
+  if (budgetCheck.status === "blocked") {
+    auditEvent(harnessStateDir, { type: "budget.blocked", used: budgetCheck.used, limit: budgetCheck.limit });
+    throw new Error(`Harness blocked: token budget exhausted (${budgetCheck.used}/${budgetCheck.limit}).`);
+  }
+  auditEvent(harnessStateDir, { type: "task.started", prompt: request.prompt?.slice(0, 200) });
+  // --- end harness pre-flight ---
 
   const taskMetadata = buildTaskRunMetadata({
     prompt: request.prompt,
@@ -463,7 +512,16 @@ async function executeTaskRun(request) {
     threadName: resumeThreadId ? null : buildPersistentTaskThreadName(request.prompt || DEFAULT_CONTINUE_PROMPT)
   });
 
-  const rawOutput = typeof result.finalMessage === "string" ? result.finalMessage : "";
+  const rawOutputOriginal = typeof result.finalMessage === "string" ? result.finalMessage : "";
+  // --- harness: post-flight sanitize + audit ---
+  const sanitized = sanitizeOutput(rawOutputOriginal);
+  if (sanitized.redactions.length > 0) {
+    auditEvent(harnessStateDir, { type: "redaction.applied", redactions: sanitized.redactions });
+  }
+  const rawOutput = sanitized.text;
+  recordUsage(harnessStateDir, (request.prompt || "").length, rawOutputOriginal.length);
+  auditEvent(harnessStateDir, { type: "task.completed", threadId: result.threadId, status: result.status });
+  // --- end harness post-flight ---
   const failureMessage = result.error?.message ?? result.stderr ?? "";
   const rendered = renderTaskResult(
     {
