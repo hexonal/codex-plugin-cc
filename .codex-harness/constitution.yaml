@@ -1,0 +1,67 @@
+version: 1
+
+mode: standard
+
+budget:
+  max_tool_calls: 500
+  max_prompt_tokens: 100000
+  max_concurrent_jobs: 3
+
+risk_rules:
+  - name: no-destructive-rm
+    pattern: "rm\\s+-rf?\\s+/"
+    severity: critical
+    applies_to:
+      - Bash
+  - name: no-destructive-rm-home
+    pattern: "rm\\s+-rf?\\s+~"
+    severity: critical
+    applies_to:
+      - Bash
+  - name: credential-env-write
+    pattern: "(?:AWS_SECRET|OPENAI_API_KEY|GITHUB_TOKEN)\\s*="
+    severity: high
+    applies_to:
+      - Bash
+      - Write
+      - Edit
+  - name: network-exfil
+    pattern: "curl.*\\|\\s*bash|wget.*\\|\\s*sh"
+    severity: high
+    applies_to:
+      - Bash
+  - name: sudo-escalation
+    pattern: "\\bsudo\\b"
+    severity: medium
+    applies_to:
+      - Bash
+  - name: write-outside-workspace
+    pattern: "\\.\\./\\.\\./|/etc/|/usr/|/var/"
+    severity: high
+    applies_to:
+      - Write
+      - Edit
+      - MultiEdit
+
+permissions:
+  blockOn:
+    - critical
+  requireApprovalOn:
+    - high
+  alwaysAllow:
+    - Read
+    - Glob
+    - Grep
+    - LS
+  alwaysBlock: []
+
+sanitize:
+  enabled: true
+  patterns:
+    - name: internal-endpoint
+      pattern: "https://internal\\.corp\\.example\\.com"
+      replacement: "[REDACTED:internal-endpoint]"
+
+audit:
+  enabled: true
+  retain_sessions: 10
