@@ -16,15 +16,6 @@
         "name": "OpenAI"
       },
       "source": "./plugins/codex"
-    },
-    {
-      "name": "harness-engineering",
-      "description": "Harness Engineering governance layer for Claude Code. Risk classification, permission gating, output sanitisation, JSONL audit trail, and token budget management via YAML constitution.",
-      "version": "1.0.0",
-      "author": {
-        "name": "OpenAI"
-      },
-      "source": "./plugins/harness-engineering"
     }
   ]
 }
